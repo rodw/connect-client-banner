@@ -1,0 +1,21 @@
+{
+  "name": "connect-client-banner",
+  "description": "Connect/Express middleware that temporarily bans clients that submit requests matching specified patterns.",
+  "version": "0.1.0",
+  "private": "false",
+  "scripts": {
+    "test": "make test"
+  },
+  "dependencies": {
+  },
+  "devDependencies": {
+    "coffee-script":  "latest",
+    "docco": "latest",
+    "coffee-coverage": "latest",
+    "mocha": "latest",
+    "should": "latest"
+  },
+  "engines": {
+    "node": ">= 0.10.3"
+  }
+}

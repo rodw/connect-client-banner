@@ -8,7 +8,59 @@ ConnectClientBanner     = require(path.join(LIB_DIR,'connect-client-banner')).Co
 
 describe 'ConnectClientBanner',->
 
-  banner = new ConnectClientBanner()
+  DEFAULT_RULES = [
+    { attr:'path', matches:/(\.|_)((aspx?)|(cfml?)|(cgi)|(php[0-9]?)|(do)|(jspa?)|(log)|(out)|(git[^\.]*)|(conf(ig)?)|(types)|(pl)|([a-z]+htm?l?)|(mspx))$/i }
+    { attr:'path', matches:/[\&\|;`"'<>()%\$~\^\=: \+]/i }
+    { attr:'path', matches:/admin/i }
+    { attr:'path', matches:/cgi-bin/i }
+    { attr:'path', matches:/login\/?$/i }
+    { attr:'path', matches:/p\/m\/a/i }
+    { attr:'path', matches:/php/i }
+    { attr:'path', matches:/servlet\/?$/i }
+    { attr:'path', matches:/w00t/i }
+    { attr:'path', matches:/^\/wp/i }
+    { attr:'path', matches:/--/ }
+    { attr:'path', matches:/drop( |(%20)|\+)/i }
+    { attr:'path', matches:/( |(%20)|\+)and( |(%20)|\+)/i }
+    { attr:'path', matches:/( |(%20)|\+)or( |(%20)|\+)/i }
+    { attr:'path', matches:/\.\./ }
+    { attr:'path', matches:/\/((img)|(js)|(css)|(figure))\/?$/ }
+    { attr:'path', matches:/\/\./ }
+    { attr:'path', matches:/\/\// }
+    { attr:'path', matches:/^\/?((my)|(web))?((sql)|(db))/i }
+    { attr:'path', matches:/^\/?config/ }
+    { attr:'path', matches:/^\/?manager\//i }
+    { attr:'path', matches:/^\/?pma/i }
+    { attr:'path', matches:/^\/?user\//i }
+    { attr:'path', matches:/^\/a$/ }
+    { attr:'path', matches:/^\/muie/i }
+    { attr:'path', matches:/^\/user/i }
+    { attr:'path', matches:/^\/x.txt/i }
+    { header:'user-agent', matches:/panscient/ }
+    { header:'user-agent', matches:/Indy Library/i }
+    { header:'user-agent', matches:/ZmEu/i }
+    { header:'user-agent', matches:/Morfeus Fucking Scanner/i }
+    { header:'user-agent', matches:/Morfeus Fucking Scanner/i }
+    { AND: [
+      { attr:'path', is:'/how-to-umlaut' }
+      { OR: [
+        { header:'referer',in: [
+          'http://buy-tramadolonline.org/'
+          'http://ganja-seeds.net/'
+          'http://pornoforadult.com/'
+          'http://pornogig.com/'
+          'http://sexmsk.nl/'
+          'http://shiksabd.com/'
+          'http://stop-drugs.net/'
+          'http://xn--l1aengat.xn--p1ai/'
+          'https://itunes.apple.com/us/app/cookies!-i-need-more-cookies!/id723364834'
+        ] }
+        { header:'referer',matches:/\.ru\/$/ }
+      ] }
+    ] }
+  ]
+
+  banner = new ConnectClientBanner(rules:DEFAULT_RULES)
 
   it 'blocks some jerks from russia',(done)->
     referrers = [
@@ -43,7 +95,7 @@ describe 'ConnectClientBanner',->
 
 
   it 'allows various known good paths',(done)->
-    banner = new ConnectClientBanner()
+    banner = new ConnectClientBanner(rules:DEFAULT_RULES)
     paths = [
       '/graphviz-cookbook/'
       '/graphviz-cookbook'
@@ -61,10 +113,6 @@ describe 'ConnectClientBanner',->
       '/img/gv-cb-bg-01.png'
       '/css/style.css'
       '/js/script.js'
-      '/export/full'
-      '/export/visitors'
-      '/export/signups'
-      '/export/visitors/recent'
     ]
     for path in paths
       req = {
@@ -83,7 +131,7 @@ describe 'ConnectClientBanner',->
     done()
 
   it 'blocks various known bad paths',(done)->
-    banner = new ConnectClientBanner()
+    banner = new ConnectClientBanner(rules:DEFAULT_RULES)
     paths = [
       "' or '1'='1"
       "/foo/'/bar"

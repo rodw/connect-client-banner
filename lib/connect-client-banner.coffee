@@ -1,42 +1,8 @@
-fs      = require 'fs'
-path    = require 'path'
-HOMEDIR = path.join(__dirname,'..')
-LIB_COV = path.join(HOMEDIR,'lib-cov')
-LIB_DIR = if fs.existsSync(LIB_COV) then LIB_COV else path.join(HOMEDIR,'lib')
-
-
-# rule structure
-# { attr: "path", matching:/regexp/ }
-# { attr: "path", matching:"String" }
-# { attr: "path", is:"String" }
-# { attr: "path", is:Number }
-# { attr: "path", is:Object }
-# { attr: "path", isnt:"String" }
-# { attr: "path", isnt:Number }
-# { attr: "path", isnt:Object }
-# { attr: "foo",  matching:function(req) }
-# { attr: "foo",  ">":N }
-# { attr: "foo",  ">=":N }
-# { attr: "foo",  "<":N }
-# { attr: "foo",  "<=":N }
-# { attr: "foo",  "<=":N }
-# { attr: "foo",  "==":N }
-# { attr: "foo",  "!=":N }
-# { attr: "foo",  "<>":N }
-# { header: }
-# { NOT: <rule> }
-# { NOT: [ <rule>,... ] }
-# { UNLESS: <rule> }
-# { UNLESS: [ <rule>,... ] }
-# { AND: [ <rule>,... ] }
-# { OR: [ <rule>,... ] }
-# { ALL: [ <rule>,... ] }
-# { ANY: [ <rule>,... ] }
-# { predicate: function(req) }
-
-
+# ***RuleEvaluator*** is an internal class used to evalute individual *ConnectClientBanner* rules.
 class RuleEvaluator
 
+  # Evaluate the given request against the given rule.
+  # Returns `true` if the request matches the rule, `false` otherwise.
   evaluate_rule:(rule,req)=>
     value = null
     if rule['attr']?
@@ -72,6 +38,7 @@ class RuleEvaluator
         return @predicate_compare(value,verb,rule[verb])
     throw new Exception('Unrecognized rule format. Expected one of "test", "matching", "matches", "is", "==", "~=", "isnt", "!=", "<>", "<", "<=", ">=" or "<".')
 
+  #  A predicate function used to evaluate "<L> <OP> <R>" comparisons, such as `<= 5` or `!= 6`
   predicate_compare:(left,operator,right)=>
     switch operator
       when '<' then return (left < right)
@@ -86,7 +53,7 @@ class RuleEvaluator
       else
         throw new Error("Unrecognized operator #{operator}.")
 
-
+  # A predicate function used to evaluate "matching" or "is" expressions (based on the pattern type).
   predicate_matching:(value,pattern)=>
     if pattern instanceof RegExp
       return pattern.test(value)
@@ -100,14 +67,19 @@ class RuleEvaluator
           value = value.toString()
       return (value is pattern)
 
-  predicate_not_matching:(value,pattern)=>(not @predicate_matching(value,pattern))
+  # The logical inverse of the `predicate_matching` function.
+  predicate_not_matching:(value,pattern)=>
+    (not @predicate_matching(value,pattern))
 
+  # Ensure the given value is an array (by wrapping scalar values in a one-element array when needed).
   to_array:(value)=>
     if Array.isArray(value)
       return value
     else
       return [value]
 
+  # Evaluate the given request against each rule in the given `rule_list`,
+  # returning `false` if any individual rule does, `true` otherwise.
   evaluate_and_of:(rule_list, req)=>
     rule_list = @to_array(rule_list)
     for rule in rule_list
@@ -115,6 +87,8 @@ class RuleEvaluator
         return false
     return true
 
+  # Evaluate the given request against each rule in the given `rule_list`,
+  # returning `true` if any individual rule does, `false` otherwise.
   evaluate_or_of:(rule_list, req)=>
     rule_list = @to_array(rule_list)
     for rule in rule_list
@@ -122,80 +96,61 @@ class RuleEvaluator
         return true
     return false
 
-DEFAULT_RULES = [
-  { attr:'path', matches:/(\.|_)((aspx?)|(cfml?)|(cgi)|(php[0-9]?)|(do)|(jspa?)|(log)|(out)|(git[^\.]*)|(conf(ig)?)|(types)|(pl)|([a-z]+htm?l?)|(mspx))$/i }
-  { attr:'path', matches:/[\&\|;`"'<>()%\$~\^\=: \+]/i }
-  { attr:'path', matches:/admin/i }
-  { attr:'path', matches:/cgi-bin/i }
-  { attr:'path', matches:/login\/?$/i }
-  { attr:'path', matches:/p\/m\/a/i }
-  { attr:'path', matches:/php/i }
-  { attr:'path', matches:/servlet\/?$/i }
-  { attr:'path', matches:/w00t/i }
-  { attr:'path', matches:/^\/wp/i }
-  { attr:'path', matches:/--/ }
-  { attr:'path', matches:/drop( |(%20)|\+)/i }
-  { attr:'path', matches:/( |(%20)|\+)and( |(%20)|\+)/i }
-  { attr:'path', matches:/( |(%20)|\+)or( |(%20)|\+)/i }
-  { attr:'path', matches:/\.\./ }
-  { attr:'path', matches:/\/((img)|(js)|(css)|(figure))\/?$/ }
-  { attr:'path', matches:/\/\./ }
-  { attr:'path', matches:/\/\// }
-  { attr:'path', matches:/^\/?((my)|(web))?((sql)|(db))/i }
-  { attr:'path', matches:/^\/?config/ }
-  { attr:'path', matches:/^\/?manager\//i }
-  { attr:'path', matches:/^\/?pma/i }
-  { attr:'path', matches:/^\/?user\//i }
-  { attr:'path', matches:/^\/a$/ }
-  { attr:'path', matches:/^\/muie/i }
-  { attr:'path', matches:/^\/user/i }
-  { attr:'path', matches:/^\/x.txt/i }
-  { header:'user-agent', matches:/panscient/ }
-  { header:'user-agent', matches:/Indy Library/i }
-  { header:'user-agent', matches:/ZmEu/i }
-  { header:'user-agent', matches:/Morfeus Fucking Scanner/i }
-  { header:'user-agent', matches:/Morfeus Fucking Scanner/i }
-  { AND: [
-    { attr:'path', is:'/how-to-umlaut' }
-    { OR: [
-      { header:'referer',in: [
-        'http://buy-tramadolonline.org/'
-        'http://ganja-seeds.net/'
-        'http://pornoforadult.com/'
-        'http://pornogig.com/'
-        'http://sexmsk.nl/'
-        'http://shiksabd.com/'
-        'http://stop-drugs.net/'
-        'http://xn--l1aengat.xn--p1ai/'
-        'https://itunes.apple.com/us/app/cookies!-i-need-more-cookies!/id723364834'
-      ] }
-      { header:'referer',matches:/\.ru\/$/ }
-    ] }
-  ] }
-]
-
 
 class ConnectClientBanner
-  constructor:()->
-    @rule_evaluator = new RuleEvaluator()
-    @rules = DEFAULT_RULES
 
+  constructor:(options)->
+    @configure(options)
+
+  # Options:
+  #  - `rules` - the list (array) of rules (defaults to `[]`)
+  #  - `reset_interval` - the time (in milliseconds) between "resets" of the banned IP address list (defaults to 2 hours)
+  #  - `ban_response` - the method to invoke when a request is being banned (defaults to sending a 403 status and then ending)
+  #  - `evaluator` - a rule evaluator (defaults to `new RuleEvaluator()`); you probably don't need to override this.
+  configure:(options)=>
+    if options.evaluator?
+      @rule_evaluator = options.evaluator
+    @rule_evaluator ?= new RuleEvaluator()
+
+    if options.rules?
+      @rules = options.rules
+    @rules ?= []
+
+    if options.reset_interval?
+      @reset_interval = options.reset_interval
+    @reset_interval ?= 2*60*60*1000
+
+    if options.ban_response?
+      @ban_response = options.ban_response
+    @ban_response ?= (req,res,next)=>
+      res.status(403)
+      res.end()
+
+  # Returns `true` if the given request is banned under our current rule set.
   request_is_banned:(req)=>
     for rule in @rules
       if @rule_evaluator.evaluate_rule(rule,req)
         return true
     return false
 
+  # The list of currently banned IP addresss.
   banned_ips: []
+  # The timestamp (in milliseconds since the epoch) at which we last cleared the `banned_ips` list.
   last_reset: Date.now()
-  millis_between_resets: 2*60*60*1000 # two hours
+  # The number of blocked requests since this instance was created.
   total_blocked: 0
+  # The number of blocked requests since the last reset.
   recently_blocked: 0
+  # The number of not-blocked requests since this instance was created.
   total_allowed: 0
+  # The number of not-blocked requests since the last reset.
   recently_allowed: 0
 
+  # If the `reset_interval` has passed, clear the banned IP list amd return true.
+  # Otherwise do nothing and return false.
+  # Pass a single argument `true` to force a reset, no matter how long it has been since the last one.
   maybe_reset:(force=false)=>
-    if force or ((@millis_between_resets > 0) and ((Date.now()-@last_reset) > @millis_between_resets))
+    if force or ((@reset_interval > 0) and ((Date.now()-@last_reset) > @reset_interval))
       @banned_ips = []
       @last_reset = Date.now()
       @recently_blocked = 0
@@ -204,23 +159,24 @@ class ConnectClientBanner
     else
       return false
 
+  # Returns `true` if the given IP address is currently in the banned list.
   banned_ip:(client_ip)=>client_ip? and (client_ip in @banned_ips)
 
+  # Determine the client IP address from the request.
   get_ip:(req)=>if req?.ips?[0]? then req.ips[0] else req?.ip
 
+  # Add the given client IP address to the banned list.
   ban_ip:(client_ip)=>
     if client_ip?
       @banned_ips.push(client_ip)
 
-  _send_banned_response:(req,res,next)=>
+  # Send the banned response (logging the request as needed).
+  send_banned_response:(req,res,next)=>
     @total_blocked++
     @recently_blocked++
-    @send_banned_response(req,res,next)
+    @ban_response(req,res,next)
 
-  send_banned_response:(req,res,next)=>
-    res.status(403)
-    res.end()
-
+  # The middleware "handle" function.
   handle:(req,res,next)=>
     client_ip = @get_ip(req)
     if @banned_ip(client_ip)
@@ -228,16 +184,16 @@ class ConnectClientBanner
     else if @request_is_banned(req)
       @ban_ip(client_ip)
       @_send_banned_response(req,res,next)
-    else if req.path is "/banned"
-      res.json(@get_ban_data())
     else
       next()
       @total_allowed++
       @recently_allowed++
 
+  # Add this middleware to the given express app.
   add_middleware:(express_app)=>
     express_app.use @handle
 
+  # Return a JSON data structure describing the banned list and other collected statistics.
   get_ban_data:()=>{
     banned:@banned_ips
     since:@last_reset
